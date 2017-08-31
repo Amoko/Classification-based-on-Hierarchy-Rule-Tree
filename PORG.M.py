@@ -84,26 +84,6 @@ def lcs_len(s1, s2):
 					pre[i][j] = "L"
 	return dp[-1][-1], pre
 
-def get_lcs_inner(pre, s1, i, j, lcs):
-	#print i, j
-	if i == 0 or j == 0:
-		return
-	if pre[i][j] == 0:
-		#print 0
-		get_lcs_inner(pre, s1, i - 1, j - 1, lcs)
-		lcs.append(s1[i])
-	elif pre[i][j] == "T":
-		#print "T"
-		get_lcs_inner(pre, s1, i - 1, j, lcs)
-	else:
-		#print "L"
-		get_lcs_inner(pre, s1, i, j - 1, lcs)
-
-def get_lcs(pre, s1, i, j):
-	lcs = []
-	get_lcs_inner(pre, s1, i - 1, j - 1, lcs)
-	return lcs
-
 # non-recursion version
 def get_lcs_nr(pre, s1, i, j):
 	lcs = []
@@ -146,61 +126,7 @@ def isSubsequence(s1, s2):
 		j += 1
 	return i == len1
 
-# ubr: [beta, alpha, sup, conf]
-def UBR_Patch():
-	ubr = []
-	#iteration = ["A", "B", "C", "D"]
-	iteration = ["D"]
-	for beta in iteration:
-		# make data
-		m1 = []
-		for line in matrix:
-			beta_1 = which_beta(line, GSM_info)
-			if beta_1 == beta:
-				m1.append(line)
-		N = len(m1)
-		print beta, N
-
-		#start search
-		for i in range(N):
-			print i
-			s1 = m1[i]
-			j = i
-
-			while(True):
-				j += 1
-				j = j % len(m1)
-				s2 = m1[j]
-
-				l, pre = lcs_len(s1, s2)
-				lcs = get_lcs_nr(pre, s1, len(s1), len(s2))
-				s1 = list(lcs)
-				s1.insert(0, "x")
-
-				if l <= 10:
-					if l < 2:
-						print ""
-						break
-					# get sup & conf of rule
-					count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-					for line in matrix:
-						if isSubsequence(lcs, line):
-							beta_1 =  which_beta(line, GSM_info)
-							count[beta_1] += 1
-					sup = count[beta]
-					conf = 1.0  * sup / sum(count.values())
-					ceiling = 1.0  * N / (N + sum(count.values()) - sup)
-					print l, sup, conf, ceiling, count, time.ctime()
-					temp = [beta, lcs, sup, conf]
-					
-					#ubr.append(temp)
-			#break
-	
-	with open("ubr.AD.pickle", "w") as fp:
-		pickle.dump(ubr, fp)
-
-def DFS(m1, s1, start, N, beta):
-	mini_conf = 0.05
+def DFS(m1, s1, start, N, beta, mini_conf):
 	for j in range(start, N):
 		s2 = m1[j]
 
@@ -209,9 +135,8 @@ def DFS(m1, s1, start, N, beta):
 		new =  list(lcs)
 		new.insert(0, "x")
 
-
 		if l > 12:
-			temp = DFS(m1, new, start + 1, N, beta)
+			temp = DFS(m1, new, start + 1, N, beta, mini_conf)
 			if temp != None:
 				return temp
 		elif l > 1:
@@ -230,7 +155,7 @@ def DFS(m1, s1, start, N, beta):
 				print l, sup, conf, ceiling, count, time.ctime()
 				return temp
 			elif mini_conf <= ceiling:
-				temp = DFS(m1, new, start + 1, N, beta)
+				temp = DFS(m1, new, start + 1, N, beta, mini_conf)
 				if temp != None:
 					return temp
 			else:
@@ -241,117 +166,56 @@ def DFS(m1, s1, start, N, beta):
 
 # ubr: [beta, alpha, sup, conf]
 def UBR_DFS():
-	ubr = []
-	#iteration = ["A", "B", "C", "D"]
-	iteration = ["A"]
-	for beta in iteration:
-		# make data
-		remain = []
-		for line in matrix:
-			beta_1 = which_beta(line, GSM_info)
-			if beta_1 == beta:
-				remain.append(line)
-		N = len(remain)
-		print beta, N
+	remain = read_data("mixed.sample.A2")
+	current = copy.deepcopy(remain)
+	ubr, beta, mini_conf = [], "A", 0.75
 
-		m1 = copy.deepcopy(remain)
-		while(True):
-			N = len(m1)
-			if N < 10:
-				break
-			print N, time.ctime()
-			
-			temp= DFS(m1, m1[0], 1, N, beta)
+	while(True):
+		N = len(current)
+		if N < 2:
+			break
+		print "current", N, time.ctime()
+		
+		temp= DFS(current, current[0], 1, N, beta, mini_conf)
 
-			if temp == None:
-				print m1[0]
-				del m1[0]
-			else:
-				ubr.append(temp)
-				lcs = temp[1]
-				remain = [line for line in remain if not isSubsequence(lcs, line)]
-				m1 = copy.deepcopy(remain)
-			
-
-	with open("ubr.A.pickle", "w") as fp:
+		if temp == None:
+			print "pop", time.ctime()
+			del current[0]
+		else:
+			ubr.append(temp)
+			lcs = temp[1]
+			remain = [line for line in remain if not isSubsequence(lcs, line)]
+			current = copy.deepcopy(remain)
+		
+	print len(ubr)
+	with open("ubr.A2.pickle", "w") as fp:
 		pickle.dump(ubr, fp)
 
-def M2B():
-	matrix = read_data("age_train_topk2")
-	GSM_info = read_data("GSM_info")
-	matrix = convert(matrix)
-	ubr = read_data("ubr.25")
-	
-	ubrB = []
-	for rule in ubr:
-		beta, lcs = rule[0], rule[1]
-		if beta == "A" or beta == "B":
-			beta = "AB"
-		else:
-			beta = "CD"
+def  mix():
+	beta = "D"
+	remain = []
+	for line in matrix:
+		beta_1 = which_beta(line, GSM_info)
+		if beta_1 == beta:
+			remain.append(line)
+	N = len(remain)
+	print beta, N
 
-		# get sup & conf
-		count = {'AB': 0, 'CD': 0}
-		for line in matrix:
-			if isSubsequence(lcs, line):
-				real =  which_beta_B(line, GSM_info)
-				count[real] += 1
-		print count
-		sup = sum(count.values())
-		conf = 1.0  * count[beta] / sup
-	
-		print beta, sup, conf, count
-		temp = [beta, lcs, sup, conf]
-		ubrB.append(temp)
-		#break
-	
-	with open("ubrB.pickle", "w") as fp:
-		pickle.dump(ubrB, fp)
+	ms = []
+	for i in range(0, N, 2):
+		j = (i + 1) % N
+		s1, s2= remain[i], remain[j]
 
-def UBR_Select():
-	ubr = read_data("ubr.M.25")
+		l, pre = lcs_len(s1, s2)
+		lcs = get_lcs_nr(pre, s1, len(s1), len(s2))
+		new =  list(lcs)
+		new.insert(0, "D2")
+		ms.append(new)
+		print i, j, l, time.ctime()
 
-	ubrs = []
-	'''
-	#iteration = ["A", "B", "C", "D"]
-	iteration = ["AB", "CD"]
-	for beta in iteration:
-		m = []
-		for rule in ubr:
-			pass
-			if rule[0] == beta:
-				m.append(rule)
-		m.sort(key = lambda e: (e[-1], e[-2]), reverse = True)
-		
-		part = len(m) / 2
-		temp = m[:part]
-		print temp[-1]
-		for e in temp:
-			ubrs.append(e)
-	'''
-	for e in ubr:
-		if e[-1] >= 0.7:
-			ubrs.append(e)
-	print "Select over.", time.ctime()
-
-	with open("ubrs.M.25.pickle", "w") as fp:
-		pickle.dump(ubrs, fp)
-
-# find LBR from top to bottom, but it will be factorial explosion
-def LBR_inner(matrix, alpha, sup):
-	for e in alpha:
-		na = copy.copy(alpha)
-		na.remove(e)
-		count = 0
-		for line in matrix:
-			if isSubsequence(na, line):
-				count += 1
-		if count == sup:
-			inner(matrix, na, sup)
-		else:
-			print alpha, e
-			return
-	pass
+	print len(ms)
+	with open("mixed.sample.D.2.pickle", "w") as fp:
+		pickle.dump(ms, fp)
 
 # lbr: [beta, alpha, sup, conf]
 def LBR():
@@ -430,9 +294,6 @@ def classifier():
 	print 1.0 * s / len(matrix)
 
 def age_distribution():
-	matrix = read_data("age_test_topk2")
-	GSM_info = read_data("GSM_info")
-	
 	count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
 	for line in matrix:
 		beta = which_beta(line, GSM_info)
@@ -451,31 +312,32 @@ def merge():
 		pickle.dump(keys1, fp)
 
 def test():
-	pass
-	lbr = read_data("ubr")
-	count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-	c = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-	for rule in lbr:
-		print rule
-		beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
-		count[beta] += conf * sup / 20
-		c[beta] += 1
+	lbr = read_data("ubr.D2")
 
-	print count
-	print c
+	s = 0
+	for line in matrix:
+		real =  which_beta(line, GSM_info)
+		if real  == "D":
+			for rule in lbr:
+				#print rule
+				beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
+				if isSubsequence(alpha, line):
+					s += 1
+					break
+	print s
 
 if __name__ == "__main__":
 	print "Start.", time.ctime()
+	#mix()
+	#merge()
 	
-	matrix = read_data("age_train_topk2")
+	matrix = read_data("age_train_802")
 	GSM_info = read_data("GSM_info")
 	matrix = convert(matrix)
+	age_distribution()
 	
-	#lcs_test()
-	#merge()
-	#age_distribution()
-	#UBR_Patch()
 	UBR_DFS()
+	test()
 	#LBR()
 	#classifier()
 	print "End.", time.ctime()
