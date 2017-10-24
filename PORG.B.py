@@ -12,6 +12,12 @@ def read_data(path):
 	print len(obj), path + " elements load over.", time.ctime()
 	return obj
 
+def read_data_b(path):
+	with open(path + ".pickle", "rb") as fp:
+		obj = pickle.load(fp)
+	print len(obj), path + " elements load over.", time.ctime()
+	return obj
+
 def which_beta(line, GSM_info):
 	gsm = line[0]
 	age = GSM_info[gsm][1]
@@ -36,8 +42,30 @@ def which_beta_B(line, GSM_info):
 		label = "D"
 	return label
 
+def which_beta_B2(line, GSM_info):
+	gsm = line[0]
+	age = GSM_info[gsm][1]
+	#print age
+	if age < 40:
+		label = "AB"
+	else:
+		label = "CD"
+	return label
+
+def merge():
+	keys1 = read_data("mixed.sample.C2")
+	keys2 = read_data("mixed.sample.D2")
+	#keys3 = read_data("mixed.sample.C2")
+	
+	for key in keys2:
+		keys1.append(key)
+	print len(keys1), keys1[-1]
+
+	with open("mixed.sample.CD2.pickle", "w") as fp:
+		pickle.dump(keys1, fp)
+
 def mix():
-	beta = "D"
+	beta = "AB"
 	remain = []
 	for line in matrix:
 		beta_1 = which_beta(line, GSM_info)
@@ -153,55 +181,71 @@ def isSubsequence(s1, s2):
 		j += 1
 	return i == len1
 
-def DFS(m1, s1, start, N, beta, mini_conf):
+def DFS(m1, s1, path, N, beta, mini_conf):
 	global deep
 	deep += 1
-	print deep, N, len(matrix)
-	for j in range(start, N):
+	print deep, path, len(s1), time.ctime()
+
+	for j in range(path[-1] + 1, N):
 		s2 = m1[j]
 
 		l, pre = lcs_len(s1, s2)
 		lcs = get_lcs_nr(pre, s1, len(s1), len(s2))
 		new =  list(lcs)
 		new.insert(0, "x")
-
-		if l > 12:
-			temp = DFS(m1, new, start + 1, N, beta, mini_conf)
+		if new == s1:
+			temp = DFS(m1, new, path + [j], N, beta, mini_conf)
 			if temp != None:
 				return temp
-		elif l > 1:
-			# get sup & conf of rule
-			#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-			count = {'ABC': 0, 'D': 0}
-			for line in matrix:
-				if isSubsequence(lcs, line):
-					#beta_1 =  which_beta(line, GSM_info)
-					beta_1 =  which_beta_B(line, GSM_info)
-					count[beta_1] += 1
-			sup = count[beta]
-			conf = 1.0  * sup / sum(count.values())
-			ceiling = 1.0  * subsum / (subsum + sum(count.values()) - sup)
-			temp = [beta, lcs, sup, conf]
-
-			if mini_conf <= conf:
-				print l, sup, conf, ceiling, count, time.ctime()
-				return temp
-			elif mini_conf <= ceiling:
-				temp = DFS(m1, new, start + 1, N, beta, mini_conf)
+		else:
+			if l > 12:
+				temp = DFS(m1, new, path + [j], N, beta, mini_conf)
 				if temp != None:
 					return temp
+			elif l > 1:
+				# get sup & conf of rule
+				#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+				#count = {'ABC': 0, 'D': 0}
+				count = {'AB': 0, 'CD': 0}
+				for line in matrix:
+					if isSubsequence(lcs, line):
+						#beta_1 =  which_beta(line, GSM_info)
+						#beta_1 =  which_beta_B(line, GSM_info)
+						beta_1 =  which_beta_B2(line, GSM_info)
+						count[beta_1] += 1
+				sup = count[beta]
+				conf = 1.0  * sup / sum(count.values())
+				ceiling = 1.0  * subsum[beta] / (subsum[beta] + sum(count.values()) - sup)
+				temp = [beta, lcs, sup, conf]
+				#print temp
+
+				if mini_conf <= conf:
+					print l, sup, conf, ceiling, count, time.ctime()
+					return temp
+				elif mini_conf <= ceiling:
+					#print conf, count
+					temp = DFS(m1, new, path + [j], N, beta, mini_conf)
+					if temp != None:
+						return temp
+				else:
+					#print j, "ceiling fail", time.ctime()
+					pass
 			else:
+				#print j, "empty", time.ctime()
 				pass
-		else:
-			pass
 	return None
 
 # ubr: [beta, alpha, sup, conf]
 def UBR_DFS():
-	remain = read_data("mixed.sample.ABC4")
+	remain = read_data("mixed.sample.AB2")
 	current = copy.deepcopy(remain)
-	ubr, beta, mini_conf = [], "ABC", 0.85
+	ubr, beta, mini_conf = [], "AB", 0.85
 
+	'''
+	for e in remain:
+		print len(e), e
+	return
+	'''
 	while(True):
 		N = len(current)
 		if N < 2:
@@ -210,7 +254,7 @@ def UBR_DFS():
 		
 		global deep
 		deep = 0
-		temp= DFS(current, current[0], 1, N, beta, mini_conf)
+		temp= DFS(current, current[0], [0], N, beta, mini_conf)
 
 		if temp == None:
 			print "pop", time.ctime()
@@ -218,11 +262,12 @@ def UBR_DFS():
 		else:
 			ubr.append(temp)
 			lcs = temp[1]
-			remain = [line for line in remain if not isSubsequence(lcs, line)]
-			current = copy.deepcopy(remain)
+			current = [line for line in current if not isSubsequence(lcs, line)]
+			#remain = [line for line in remain if not isSubsequence(lcs, line)]
+			#current = copy.deepcopy(remain)
 		
 	print len(ubr)
-	with open("ubr.ABC4.0.85.pickle", "w") as fp:
+	with open("ubr.AB2.pickle", "w") as fp:
 		pickle.dump(ubr, fp)
 
 # lbr: [beta, alpha, sup, conf]
@@ -250,7 +295,7 @@ def LBR():
 				lbr_sup = count[beta]
 				lbr_conf = 1.0  * lbr_sup / sum(count.values())
 				if lbr_conf >= conf:
-					temp = [beta, e, sup, lbr_conf]
+					temp = [beta, e, lbr_sup, lbr_conf]
 					lbr.append(temp)
 					
 					print temp
@@ -262,6 +307,9 @@ def LBR():
 
 def classifier_builder():
 	rules = read_data("ubr.ABC4.0.85")
+	rules_2 = read_data_b("lbr.D2b")
+	for e in rules_2:
+		rules.append(e)
 
 	#sort
 	rules.sort(key = lambda x: (x[-1], x[-2]), reverse = True)
@@ -275,51 +323,86 @@ def classifier_builder():
 	for rule in rules:
 		beta, alpha = rule[0], rule[1]
 		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta(line, GSM_info) == beta]
-		hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B(line, GSM_info) == beta]
-		if len(hit) >= 0.05 * subsum:
+		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B(line, GSM_info) == beta]
+		hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B2(line, GSM_info) == beta]
+		print len(hit), 0.05 * subsum[beta]
+		if len(hit) >= 0.05 * subsum[beta]:
 			for e in hit:
 				remain.remove(e)
+			print rule
 			classifier.append(rule)
+	#default
+	#count = {'ABC': 0, 'D': 0}
+	count = {'AB': 0, 'CD': 0}
+	for line in remain:
+		#beta = which_beta_B(line, GSM_info)
+		beta = which_beta_B2(line, GSM_info)
+		count[beta] += 1
+	print len(remain), count
 
-	with open("classifier.ABC4.0.85.pickle", "w") as fp:
+	with open("classifier.ABCD.pickle", "w") as fp:
 		pickle.dump(classifier, fp)
 
 def accuracy(classifier):
 	tp, tn, fp, fn = 0.0, 0.0, 0.0, 0.0
-	goal = "ABC"
+	default = "D"
+	positive = "ABC"
 	for line in matrix:
 		#real =  which_beta(line, GSM_info)
-		real =  which_beta_B(line, GSM_info)
+		#real =  which_beta_B(line, GSM_info)
+		real =  which_beta_B2(line, GSM_info)
 		hit = False
 		for rule in classifier:
 			beta, alpha = rule[0], rule[1]
 			if isSubsequence(alpha, line):
-				if beta == real:
-					tp += 1
+				if real == beta:
+					if real == positive:
+						tp += 1
+					else:
+						tn += 1
 				else:
-					fp += 1
+					if real == positive:
+						fn += 1
+					else:
+						fp += 1
 				hit = True
 				break
 		if not hit:
-			if real != goal:
-				tn += 1
+			if real == default:
+				if real == positive:
+					tp += 1
+				else:
+					tn += 1
 			else:
-				fn += 1
-	
-	precision = tp / (tp + fp)
+				if real == positive:
+					fn += 1
+				else:
+					fp += 1
+	precision, recall, f1, acc, precision2, recall2, f12 = 0,0,0,0,0,0,0
+	if (tp + fp) != 0:
+		precision = tp / (tp + fp)
 	recall = tp / (tp + fn)
-	f1 = 2 * precision * recall / (precision + recall) 
+	if (precision + recall) != 0:
+		f1 = 2 * precision * recall / (precision + recall)
 	acc = (tp + tn) / (tp + tn + fp + fn)
 	temp = (precision, recall, f1, acc)
+	
+	precision2 = tn / (tn + fn)
+	recall2 = tn / (tn + fp)
+	f12 = 2 * precision2 * recall2 / (precision2 + recall2)
+	temp = (precision, recall, f1, acc, precision2, recall2, f12)
+	
 	return temp
 
 def show_results():
-	classifier = read_data("classifier.ABC4.0.85")
+	classifier = read_data("classifier.ABCD")
+	#classifier = read_data_b("classifier.D2b")
 	index = []
 	for i in range(1, len(classifier) + 1):
 		temp = accuracy(classifier[0:i])
 		index.append(temp)
 		print i, classifier[i - 1]
+	print temp
 	plt.plot(range(1, len(index)+1), [e[0] for e in index], "ko")
 	plt.plot(range(1, len(index)+1), [e[1] for e in index], "ko")
 	plt.plot(range(1, len(index)+1), [e[2] for e in index], "ko")
@@ -328,36 +411,116 @@ def show_results():
 	plt.plot(range(1, len(index)+1), [e[1] for e in index], "-", label="recall")
 	plt.plot(range(1, len(index)+1), [e[2] for e in index], "-", label="f1")
 	plt.plot(range(1, len(index)+1), [e[3] for e in index], "-", label="acc")
-	plt.title("Age.bi.test " + time.ctime())
+	
+	plt.plot(range(1, len(index)+1), [e[4] for e in index], "-", label="precision2")
+	plt.plot(range(1, len(index)+1), [e[5] for e in index], "-", label="recall2")
+	plt.plot(range(1, len(index)+1), [e[6] for e in index], "-", label="f12")
+	
+	plt.title("Age.bi.train " + time.ctime())
 	plt.grid(True)
 	plt.legend()
 	plt.show()
 
-def age_distribution(goal):
+def rcbt():
+	rules1 = read_data("ubr.ABC4.0.85")
+	rules2 = read_data_b("lbr.D2")
+	
+	tp, tn, fp, fn = 0.0, 0.0, 0.0, 0.0
+	positive = "ABC"
+
+	for e in rules1:
+		print e
+	print ""
+	for e in rules2:
+		print e
+
+	for line in matrix:
+		real =  which_beta_B(line, GSM_info)
+		s1, count = 0, 0
+		for rule in rules1:
+			beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
+			if isSubsequence(alpha, line):
+				#print conf , sup , subsum[beta]
+				#s1 += conf #* sup / subsum[beta]
+				#count += 1
+				s1 = max(s1, conf)
+		#s1 = s1 / count
+		s2, count = 0, 0
+		for rule in rules2:
+			beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
+			if isSubsequence(alpha, line):
+				#print conf , sup , subsum[beta]
+				#s2 += conf #* sup / subsum[beta]
+				#count += 1
+				s2 = max(s2, conf)
+		#if count != 0:
+			#s2 = s2 / count
+		print s1, s2
+		if s1 > s2:
+			pre = "ABC"
+		else:
+			pre = "D"
+		
+		if real == positive and pre == positive:
+			tp += 1
+		elif real == positive and pre != positive:
+			fn += 1
+		elif real != positive and pre == positive:
+			fp += 1
+		elif real != positive and pre != positive:
+			tn += 1
+			if real == positive:
+				tp += 1
+			else:
+				tn += 1
+		else:
+			if real == positive:
+				fn += 1
+			else:
+				fp += 1
+	
+	precision, recall, f1, acc, precision2, recall2, f12 = 0,0,0,0,0,0,0
+	if (tp + fp) != 0:
+		precision = tp / (tp + fp)
+	recall = tp / (tp + fn)
+	if (precision + recall) != 0:
+		f1 = 2 * precision * recall / (precision + recall)
+	acc = (tp + tn) / (tp + tn + fp + fn)
+	temp = (precision, recall, f1, acc)
+	
+	precision2 = tn / (tn + fn)
+	recall2 = tn / (tn + fp)
+	f12 = 2 * precision2 * recall2 / (precision2 + recall2)
+	temp = (precision, recall, f1, acc, precision2, recall2, f12)
+	print temp
+
+def age_distribution():
 	count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
 	for line in matrix:
 		beta = which_beta(line, GSM_info)
 		count[beta] += 1
-	print count
-	print sum(count.values()), count[goal]
-	return count[goal]
+	count["AB"] = count["A"] + count["B"]
+	count["CD"] = count["C"] + count["D"]
+	count["ABC"] = count["AB"] + count["C"]
+	return count
 
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 	#mix()
 	#merge()
 	
-	#matrix = read_data("age_train_802")
-	matrix = read_data("age_test_198")
+	matrix = read_data("age_train_802")
+	#matrix = read_data("age_test_198")
 	GSM_info = read_data("GSM_info")
 	matrix = convert(matrix)
-	subsum = age_distribution("D")
-	subsum = len(matrix) - subsum
+	subsum = age_distribution()
 	print subsum
 	
-	#deep = 0
-	#UBR_DFS()
+	deep = 0
+	UBR_DFS()
 	#LBR()
 	#classifier_builder()
-	show_results()
+	#show_results()
+	#rcbt()
+
 	print "End.", time.ctime()
