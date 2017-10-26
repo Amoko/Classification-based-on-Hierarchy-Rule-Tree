@@ -90,6 +90,27 @@ def mix():
 	with open("mixed.sample.D2.pickle", "w") as fp:
 		pickle.dump(ms, fp)
 
+def head():
+	count = {}
+	for line in matrix:
+		gsm = line[0]
+		if gsm in count:
+			count[gsm] += 1
+		else:
+			count[gsm] = 1
+	print len(count)
+
+	mixed = read_data("mixed.sample.CD2")
+	for e in mixed:
+		e[0] = []
+		for line in matrix:
+			if isSubsequence(e[1:], line):
+				e[0].append(line[0])
+		print e[0], time.ctime()
+
+	with open("mixed.sample.CD2.pickle", "w") as fp:
+		pickle.dump(mixed, fp)
+
 #convert number to position by order of pos' num
 def num2pos(line):
 	s = line
@@ -237,37 +258,38 @@ def DFS(m1, s1, path, N, beta, mini_conf):
 
 # ubr: [beta, alpha, sup, conf]
 def UBR_DFS():
-	remain = read_data("mixed.sample.AB2")
-	current = copy.deepcopy(remain)
-	ubr, beta, mini_conf = [], "AB", 0.85
+	mixed = read_data("mixed.sample.CD2")
+	ubr, beta, mini_conf = [], "CD", 0.8
 
-	'''
-	for e in remain:
-		print len(e), e
-	return
-	'''
+	hit ={}
+	for line in matrix:
+		gsm = line[0]
+		hit[gsm] = 0
+
 	while(True):
-		N = len(current)
+		N = len(mixed)
 		if N < 2:
 			break
 		print "current", N, time.ctime()
 		
 		global deep
 		deep = 0
-		temp= DFS(current, current[0], [0], N, beta, mini_conf)
+		temp= DFS(mixed, mixed[0], [0], N, beta, mini_conf)
 
 		if temp == None:
 			print "pop", time.ctime()
-			del current[0]
+			del mixed[0]
 		else:
 			ubr.append(temp)
 			lcs = temp[1]
-			current = [line for line in current if not isSubsequence(lcs, line)]
-			#remain = [line for line in remain if not isSubsequence(lcs, line)]
-			#current = copy.deepcopy(remain)
+			for line in matrix:
+				gsm = line[0]
+				if isSubsequence(lcs, line):
+					hit[gsm] += 1
+			mixed = [line for line in mixed if (hit[line[0][0]] == 0 or hit[line[0][1]] == 0)]
 		
 	print len(ubr)
-	with open("ubr.AB2.pickle", "w") as fp:
+	with open("ubr.CD2.pickle", "w") as fp:
 		pickle.dump(ubr, fp)
 
 # lbr: [beta, alpha, sup, conf]
@@ -516,6 +538,7 @@ if __name__ == "__main__":
 	subsum = age_distribution()
 	print subsum
 	
+	#head()
 	deep = 0
 	UBR_DFS()
 	#LBR()
