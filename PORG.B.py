@@ -65,7 +65,7 @@ def merge():
 		pickle.dump(keys1, fp)
 
 def mix():
-	beta = "AB"
+	beta = "D"
 	remain = []
 	for line in matrix:
 		beta_1 = which_beta(line, GSM_info)
@@ -100,7 +100,7 @@ def head():
 			count[gsm] = 1
 	print len(count)
 
-	mixed = read_data("mixed.sample.CD2")
+	mixed = read_data("mixed.sample.D2")
 	for e in mixed:
 		e[0] = []
 		for line in matrix:
@@ -108,7 +108,7 @@ def head():
 				e[0].append(line[0])
 		print e[0], time.ctime()
 
-	with open("mixed.sample.CD2.pickle", "w") as fp:
+	with open("mixed.sample.D2.pickle", "w") as fp:
 		pickle.dump(mixed, fp)
 
 #convert number to position by order of pos' num
@@ -226,13 +226,13 @@ def DFS(m1, s1, path, N, beta, mini_conf):
 			elif l > 1:
 				# get sup & conf of rule
 				#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-				#count = {'ABC': 0, 'D': 0}
-				count = {'AB': 0, 'CD': 0}
+				count = {'ABC': 0, 'D': 0}
+				#count = {'AB': 0, 'CD': 0}
 				for line in matrix:
 					if isSubsequence(lcs, line):
 						#beta_1 =  which_beta(line, GSM_info)
-						#beta_1 =  which_beta_B(line, GSM_info)
-						beta_1 =  which_beta_B2(line, GSM_info)
+						beta_1 =  which_beta_B(line, GSM_info)
+						#beta_1 =  which_beta_B2(line, GSM_info)
 						count[beta_1] += 1
 				sup = count[beta]
 				conf = 1.0  * sup / sum(count.values())
@@ -258,8 +258,8 @@ def DFS(m1, s1, path, N, beta, mini_conf):
 
 # ubr: [beta, alpha, sup, conf]
 def UBR_DFS():
-	mixed = read_data("mixed.sample.CD2")
-	ubr, beta, mini_conf = [], "CD", 0.8
+	mixed = read_data("mixed.sample.D2")
+	ubr, beta, mini_conf = [], "D", 0.8
 
 	hit ={}
 	for line in matrix:
@@ -289,12 +289,12 @@ def UBR_DFS():
 			mixed = [line for line in mixed if (hit[line[0][0]] == 0 or hit[line[0][1]] == 0)]
 		
 	print len(ubr)
-	with open("ubr.CD2.pickle", "w") as fp:
+	with open("ubr.D2.0.8.pickle", "w") as fp:
 		pickle.dump(ubr, fp)
 
 # lbr: [beta, alpha, sup, conf]
 def LBR():
-	ubr = read_data("ubr.D2")
+	ubr = read_data("ubr.D2.0.8")
 	lbr = []
 
 	for rule in ubr:
@@ -309,10 +309,12 @@ def LBR():
 			l = list(itertools.combinations(alpha, i))
 			for e in l:
 				# get sup & conf of rule
-				count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+				#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
+				#count = {'AB': 0, 'CD': 0}
+				count = {'ABC': 0, 'D': 0}
 				for line in matrix:
 					if isSubsequence(e, line):
-						beta_1 = which_beta(line, GSM_info)
+						beta_1 = which_beta_B(line, GSM_info)
 						count[beta_1] += 1
 				lbr_sup = count[beta]
 				lbr_conf = 1.0  * lbr_sup / sum(count.values())
@@ -324,15 +326,16 @@ def LBR():
 					flag = True
 					break
 			
-	with open("lbr.D2.pickle", "w") as fp:
+	with open("lbr.D2.0.8.pickle", "w") as fp:
 		pickle.dump(lbr, fp)	
 
 def classifier_builder():
-	rules = read_data("ubr.ABC4.0.85")
+	rules = read_data("lbr.D2.0.8")
+	'''
 	rules_2 = read_data_b("lbr.D2b")
 	for e in rules_2:
 		rules.append(e)
-
+	'''
 	#sort
 	rules.sort(key = lambda x: (x[-1], x[-2]), reverse = True)
 	print rules[0], "\n", rules[-1]
@@ -345,34 +348,35 @@ def classifier_builder():
 	for rule in rules:
 		beta, alpha = rule[0], rule[1]
 		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta(line, GSM_info) == beta]
-		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B(line, GSM_info) == beta]
-		hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B2(line, GSM_info) == beta]
+		hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B(line, GSM_info) == beta]
+		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B2(line, GSM_info) == beta]
 		print len(hit), 0.05 * subsum[beta]
+		#if len(hit) >= 0:
 		if len(hit) >= 0.05 * subsum[beta]:
 			for e in hit:
 				remain.remove(e)
 			print rule
 			classifier.append(rule)
 	#default
-	#count = {'ABC': 0, 'D': 0}
-	count = {'AB': 0, 'CD': 0}
+	count = {'ABC': 0, 'D': 0}
+	#count = {'AB': 0, 'CD': 0}
 	for line in remain:
-		#beta = which_beta_B(line, GSM_info)
-		beta = which_beta_B2(line, GSM_info)
+		beta = which_beta_B(line, GSM_info)
+		#beta = which_beta_B2(line, GSM_info)
 		count[beta] += 1
 	print len(remain), count
 
-	with open("classifier.ABCD.pickle", "w") as fp:
+	with open("classifier.D2.0.8.pickle", "w") as fp:
 		pickle.dump(classifier, fp)
 
 def accuracy(classifier):
 	tp, tn, fp, fn = 0.0, 0.0, 0.0, 0.0
-	default = "D"
-	positive = "ABC"
+	default = "ABC"
+	positive = "D"
 	for line in matrix:
 		#real =  which_beta(line, GSM_info)
-		#real =  which_beta_B(line, GSM_info)
-		real =  which_beta_B2(line, GSM_info)
+		real =  which_beta_B(line, GSM_info)
+		#real =  which_beta_B2(line, GSM_info)
 		hit = False
 		for rule in classifier:
 			beta, alpha = rule[0], rule[1]
@@ -417,14 +421,16 @@ def accuracy(classifier):
 	return temp
 
 def show_results():
-	classifier = read_data("classifier.ABCD")
-	#classifier = read_data_b("classifier.D2b")
+	#classifier = read_data("classifier.D2.0.8")
+	classifier = read_data_b("classifier.D2b")
+
 	index = []
 	for i in range(1, len(classifier) + 1):
 		temp = accuracy(classifier[0:i])
 		index.append(temp)
 		print i, classifier[i - 1]
 	print temp
+	plt.subplot(121)
 	plt.plot(range(1, len(index)+1), [e[0] for e in index], "ko")
 	plt.plot(range(1, len(index)+1), [e[1] for e in index], "ko")
 	plt.plot(range(1, len(index)+1), [e[2] for e in index], "ko")
@@ -433,14 +439,18 @@ def show_results():
 	plt.plot(range(1, len(index)+1), [e[1] for e in index], "-", label="recall")
 	plt.plot(range(1, len(index)+1), [e[2] for e in index], "-", label="f1")
 	plt.plot(range(1, len(index)+1), [e[3] for e in index], "-", label="acc")
-	
+	plt.grid(True)
+	plt.legend()
+
+	plt.subplot(122)
 	plt.plot(range(1, len(index)+1), [e[4] for e in index], "-", label="precision2")
 	plt.plot(range(1, len(index)+1), [e[5] for e in index], "-", label="recall2")
 	plt.plot(range(1, len(index)+1), [e[6] for e in index], "-", label="f12")
-	
-	plt.title("Age.bi.train " + time.ctime())
+	plt.plot(range(1, len(index)+1), [e[3] for e in index], "-", label="acc")
 	plt.grid(True)
 	plt.legend()
+
+	plt.suptitle("Age.bi.train " + time.ctime())
 	plt.show()
 
 def rcbt():
@@ -526,13 +536,118 @@ def age_distribution():
 	count["ABC"] = count["AB"] + count["C"]
 	return count
 
+def origin():
+	# sd [[3, 42], [1, 54], [2, 60]]
+	# the first is origin index, thesecond is na count
+	sd = read_data("sd")
+
+	classifier = read_data("classifier.D2.0.8")
+	for rule in classifier:
+		print rule
+		beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
+		for e in alpha:
+			print sd[e][0]
+
+def get_w():
+	pass
+	L = len(matrix[0])
+	wp = [0] * L
+	wn = [0] * L
+	for line in matrix:
+		beta_1 = which_beta_CD(line, GSM_info)
+		if beta_1 == "CD":
+			for i in range(1, L):
+				wp[line[i]] += i
+				pass
+		else:
+			for i in range(1, L):
+				wn[line[i]] += i
+				pass
+	#[key, value]
+	#[20, 50, 30, 40, 60]
+	#[[1, 20], [2, 50], [3, 30], [4, 40], [5, 60]]
+	#[[1, 20], [3, 30], [4, 40], [2, 50], [5, 60]]
+	#[1, 3, 4, 2, 5]
+	#[[1, 0], [3, 1], [4, 2], [2, 3], [5, 4]]
+	#[[1, 0], [2, 3], [3, 1], [4, 2], [5, 4]]
+	wp = zip(range(len(wp)), wp)
+	del wp[0]
+	wp.sort(key=lambda x: x[1])
+	wp = [e[0] for e in wp]
+	wp = zip(wp, range(len(wp)))
+	wp.sort(key=lambda x: x[0])
+
+	wn = zip(range(len(wn)), wn)
+	del wn[0]
+	wn.sort(key=lambda x: x[1])
+	wn = [e[0] for e in wn]
+	wn = zip(wn, range(len(wn)))
+	wn.sort(key=lambda x: x[0])
+
+	w = []
+	for i in range(len(wp)):
+		if wp[i][0] == wn[i][0]:
+			w.append([wp[i][0], wp[i][1] - wn[i][1]])
+	w.sort(key=lambda x: x[1])
+
+	return w
+
+def nov():
+	rule = []
+	w = get_w()
+	print w[0], w[5000], w[-1]
+
+	for i in range(1000):
+		j = - (i + 1)
+		e = [w[i][0], w[j][0]]
+		if i % 30 == 0:
+			print i, e, time.ctime()
+
+		hit, nohit = {'AB': 0, 'CD': 0}, {'AB': 0, 'CD': 0}
+		#hit, nohit = {'ABC': 0, 'D': 0}, {'ABC': 0, 'D': 0}
+		for line in matrix:
+			beta = which_beta_CD(line, GSM_info)
+			if isSubsequence(e, line):
+				hit[beta] += 1
+			else:
+				nohit[beta] += 1
+
+		beta_h = max(hit, key=hit.get)
+		sup_h = hit[beta_h]
+		if sum(hit.values()) == 0:
+			conf_h = 0
+		else:
+			conf_h = 1.0  * sup_h / sum(hit.values())
+
+		beta_no = max(nohit, key=nohit.get)
+		sup_no = nohit[beta_no]
+		if sum(nohit.values()) == 0:
+			conf_no = 0
+		else:
+			conf_no = 1.0  * sup_no / sum(nohit.values())
+
+		if conf_h > conf_no:
+			temp = [beta_h, e, sup_h, conf_h]
+		else:
+			e.reverse()
+			temp = [beta_no, e, sup_no, conf_no]
+		#print temp[-1], temp[-2]
+		#if temp[-1] > 0.9 and temp[-2] > 10:
+		rule.append(temp)
+		#matrix = [line for line in matrix if not (isSubsequence(temp[1], line) and 
+			#temp[0] == which_beta_CD(line, GSM_info))]
+		#print temp, hit, nohit, len(matrix)
+
+				
+	with open("rule.nov.CD1000.pickle", "w") as fp:
+		pickle.dump(rule, fp)	
+
 if __name__ == "__main__":
 	print "Start.", time.ctime()
-	#mix()
-	#merge()
 	
-	matrix = read_data("age_train_802")
-	#matrix = read_data("age_test_198")
+	
+	#matrix = read_data("age_train_802")
+	matrix = read_data("age_test_198")
 	GSM_info = read_data("GSM_info")
 	matrix = convert(matrix)
 	subsum = age_distribution()
@@ -540,10 +655,11 @@ if __name__ == "__main__":
 	
 	#head()
 	deep = 0
-	UBR_DFS()
+	#UBR_DFS()
 	#LBR()
 	#classifier_builder()
-	#show_results()
+	show_results()
 	#rcbt()
+	origin()
 
 	print "End.", time.ctime()
