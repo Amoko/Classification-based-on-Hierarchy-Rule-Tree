@@ -1,8 +1,7 @@
 #July 23 2017
 import time
-import sys
+import random
 import copy
-import itertools
 import cPickle as pickle
 import matplotlib.pyplot as plt
 
@@ -192,8 +191,10 @@ def get_w(matrix):
 	return w
 
 def nov(matrix, k):
-	matrix = list(matrix)
-	matrix = [e for e in matrix if matrix.index(e)%3!=k]
+	#matrix = list(matrix)
+	#matrix = [e for e in matrix if matrix.index(e)%3!=k]
+	N = int(len(matrix) * 0.618)
+	matrix = random.sample(matrix, N)
 	print len(matrix)
 	classifier = []
 
@@ -247,7 +248,7 @@ def nov(matrix, k):
 				#rules.append(win)
 				pairs.append([win, loser])
 
-		if rules != []:
+		if pairs != []:
 			pairs.sort(key=lambda x:x[0][-1], reverse=True)
 			if pairs[0][0][-1] > last[-1]:
 				top = pairs[0][0]
@@ -354,7 +355,7 @@ def timing():
 
 def bagging(matrix):
 	classifiers = []
-	for i in range(3):
+	for i in range(5):
 		print i, len(matrix)
 		
 		c = nov(matrix, i)
