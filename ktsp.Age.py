@@ -30,7 +30,7 @@ def age_distribution(matrix):
 		count[beta] += 1
 	return count
 
-def ktsp(matrix, k):
+def ktsp(matrix):
 	matrix = list(matrix)
 	#matrix = [e for e in matrix if matrix.index(e)%3!=k]
 	print len(matrix)
@@ -66,7 +66,7 @@ def ktsp(matrix, k):
 
 			if temp[-1] > tops[-1][-1]:
 				tops[-1] = temp
-				tops.sort(key=lambda x:[-1], reverse=True)
+				tops.sort(key=lambda x:x[-1], reverse=True)
 				#print top
 				#print pijc0, pjic0, pijc1, pjic1
 	print tops, time.ctime()
@@ -227,10 +227,10 @@ if __name__ == "__main__":
 	print "Start.", time.ctime()
 	GSM_info = read_data("GSM_info")
 	#tsp()
-	#timing()
+	timing()
 	#acc()
 
-	test()
-	compare_a()
+	#test()
+	#compare_a()
 
 	print "End.", time.ctime()
