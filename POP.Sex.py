@@ -2,6 +2,7 @@
 import time
 import sys
 import copy
+import random
 import itertools
 import cPickle as pickle
 import matplotlib.pyplot as plt
@@ -17,40 +18,6 @@ def read_data_b(path):
 		obj = pickle.load(fp)
 	print len(obj), path + " elements load over.", time.ctime()
 	return obj
-
-def which_beta(line, GSM_info):
-	gsm = line[0]
-	age = GSM_info[gsm][1]
-	#print age
-	if age < 20:
-		label = "A"
-	elif age < 40:
-		label = "B"
-	elif age < 60:
-		label = "C"
-	else:
-		label = "D"
-	return label
-
-def which_beta_B(line, GSM_info):
-	gsm = line[0]
-	age = GSM_info[gsm][1]
-	#print age
-	if age < 60:
-		label = "ABC"
-	else:
-		label = "D"
-	return label
-
-def which_beta_B2(line, GSM_info):
-	gsm = line[0]
-	age = GSM_info[gsm][1]
-	#print age
-	if age < 40:
-		label = "AB"
-	else:
-		label = "CD"
-	return label
 
 def sex_beta(line):
 	e = line[0][-1]
@@ -107,26 +74,7 @@ def mix():
 	with open("mixed.sample.M3.pickle", "w") as fp:
 		pickle.dump(ms, fp)
 
-def head():
-	count = {}
-	for line in matrix:
-		gsm = line[0]
-		if gsm in count:
-			count[gsm] += 1
-		else:
-			count[gsm] = 1
-	print len(count)
 
-	mixed = read_data("mixed.sample.CD2")
-	for e in mixed:
-		e[0] = []
-		for line in matrix:
-			if isSubsequence(e[1:], line):
-				e[0].append(line[0])
-		print e[0], time.ctime()
-
-	with open("mixed.sample.CD2.pickle", "w") as fp:
-		pickle.dump(mixed, fp)
 
 #convert number to position by order of pos' num
 def num2pos(line):
@@ -223,184 +171,6 @@ def isSubsequence(s1, s2):
 	else:
 		return False
 
-def DFS(m1, s1, path, N, beta, mini_conf):
-	global deep
-	deep += 1
-	if deep > 200:
-		return None
-	print deep, path, len(s1), time.ctime()
-
-	for j in range(path[-1] + 1, N):
-		s2 = m1[j]
-
-		l, pre = lcs_len(s1, s2)
-		lcs = get_lcs_nr(pre, s1, len(s1), len(s2))
-		new =  list(lcs)
-		new.insert(0, "x")
-		if new == s1:
-			#print "equal"
-			temp = DFS(m1, new, path + [j], N, beta, mini_conf)
-			if temp != None:
-				return temp
-		else:
-			if l > 12:
-				temp = DFS(m1, new, path + [j], N, beta, mini_conf)
-				if temp != None:
-					return temp
-			elif l > 1:
-				# get sup & conf of rule
-				#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-				#count = {'ABC': 0, 'D': 0}
-				#count = {'AB': 0, 'CD': 0}
-				count = {'M': 0, 'F': 0}
-				for line in matrix:
-					if isSubsequence(lcs, line):
-						#beta_1 =  which_beta(line, GSM_info)
-						#beta_1 =  which_beta_B(line, GSM_info)
-						#beta_1 =  which_beta_B2(line, GSM_info)
-						beta_1 =  sex_beta(line)
-						count[beta_1] += 1
-				sup = count[beta]
-				conf = 1.0  * sup / sum(count.values())
-				ceiling = 1.0  * subsum[beta] / (subsum[beta] + sum(count.values()) - sup)
-				temp = [beta, lcs, sup, conf]
-				#print temp
-
-				if mini_conf <= conf:
-					print l, sup, conf, ceiling, count, time.ctime()
-					return temp
-				elif mini_conf <= ceiling:
-					#print conf, count
-					temp = DFS(m1, new, path + [j], N, beta, mini_conf)
-					if temp != None:
-						return temp
-				else:
-					#print j, "ceiling fail", time.ctime()
-					pass
-			else:
-				#print j, "empty", time.ctime()
-				pass
-	return None
-
-# ubr: [beta, alpha, sup, conf]
-def UBR_DFS():
-	mixed = read_data("mixed.sample.M3")
-	ubr, beta, mini_conf = [], "M", 0.75
-
-	hit ={}
-	for line in matrix:
-		gsm = line[0]
-		hit[gsm] = 0
-
-	while(True):
-		N = len(mixed)
-		if N < 2:
-			break
-		print "current", N, time.ctime()
-		
-		global deep
-		deep = 0
-		temp= DFS(mixed, mixed[0], [0], N, beta, mini_conf)
-
-		if temp == None:
-			print "pop", time.ctime()
-			del mixed[0]
-		else:
-			ubr.append(temp)
-			lcs = temp[1]
-			for line in matrix:
-				gsm = line[0]
-				if isSubsequence(lcs, line):
-					hit[gsm] += 1
-			mixed = [line for line in mixed if (hit[line[0][0]] * hit[line[0][1]] * hit[line[0][2]] == 0)]
-		
-	print len(ubr)
-	with open("ubr.M3.0.75.pickle", "w") as fp:
-		pickle.dump(ubr, fp)
-
-# lbr: [beta, alpha, sup, conf]
-def LBR():
-	ubr = read_data("ubr.F3.0.75")
-	lbr = []
-
-	for rule in ubr:
-		beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
-		print rule
-		flag = False
-
-		for i in range(2, len(alpha) + 1):
-			if flag == True:
-				break
-			print i, time.ctime()
-			l = list(itertools.combinations(alpha, i))
-			for e in l:
-				# get sup & conf of rule
-				#count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-				count = {'M': 0, 'F': 0}
-				for line in matrix:
-					if isSubsequence(e, line):
-						beta_1 = sex_beta(line)
-						count[beta_1] += 1
-				lbr_sup = count[beta]
-				lbr_conf = 1.0  * lbr_sup / sum(count.values())
-				if lbr_conf >= conf:
-					temp = [beta, e, lbr_sup, lbr_conf]
-					lbr.append(temp)
-					
-					print temp
-					flag = True
-					break
-			
-	with open("lbr.F3.0.75.pickle", "w") as fp:
-		pickle.dump(lbr, fp)	
-
-def classifier_builder():
-	'''
-	rules = read_data("lbr.F3.0.75")
-	#sort
-	rules.sort(key = lambda x: (x[-1], x[-2]), reverse = True)
-	print rules[0], "\n", rules[-1]
-	print time.ctime()
-	'''
-
-	classifier = read_data("rule.nov.M1000")
-	classifier.sort(key = lambda x: (x[-1], x[-2]), reverse = True)
-	
-	for i in range(len(classifier)):
-		if classifier[i][-1] < 0.85:
-			rules = classifier[:i]
-			print i
-			print rules[0], "\n", rules[-1]
-			break
-	#build
-	classifier = []
-	hit = []
-	remain = copy.deepcopy(matrix)
-	for rule in rules:
-		beta, alpha = rule[0], rule[1]
-		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta(line, GSM_info) == beta]
-		#hit = [line for line in remain if isSubsequence(alpha, line) and which_beta_B(line, GSM_info) == beta]
-		hit = [line for line in remain if isSubsequence(alpha, line) and sex_beta(line) == beta]
-		print len(hit), 0.02 * subsum[beta]
-		#if len(hit) > 0:
-		if len(hit) >= 0.02 * subsum[beta]:
-			for e in hit:
-				remain.remove(e)
-			print rule
-			classifier.append(rule)
-	#default
-	#count = {'ABC': 0, 'D': 0}
-	#count = {'AB': 0, 'CD': 0}
-	count = {'M': 0, 'F': 0}
-	for line in remain:
-		#beta = which_beta_B(line, GSM_info)
-		beta = sex_beta(line)
-		count[beta] += 1
-	print len(remain), count
-
-	with open("classifier.nov.pickle", "w") as fp:
-		pickle.dump(classifier, fp)
-
 def accuracy2(matrix, classifiers):
 	tp, tn, fp, fn = 0.0, 0.0, 0.0, 0.0
 	positive = "M"
@@ -475,58 +245,6 @@ def origin():
 			new.append(sd[e][0])
 		print new
 
-def show_results():
-	classifier = read_data("rule.nov.F.50")
-	'''
-	classifier = read_data("rule.nov.M10")
-	#classifier = read_data_b("classifier.D2b")
-	
-	classifier.sort(key = lambda x: (x[-1], x[-2]), reverse = True)
-	print classifier[0], "\n", classifier[-1]
-	print time.ctime()
-	'''
-
-
-	index = []
-	for i in range(1, len(classifier) + 1):
-		temp = accuracy(classifier[0:i])
-		index.append(temp)
-		print i, classifier[i - 1]
-	print temp
-	plt.subplot(121)
-	plt.plot(range(1, len(index)+1), [e[0] for e in index], "ko")
-	plt.plot(range(1, len(index)+1), [e[1] for e in index], "ko")
-	plt.plot(range(1, len(index)+1), [e[2] for e in index], "ko")
-	plt.plot(range(1, len(index)+1), [e[3] for e in index], "ko")
-	plt.plot(range(1, len(index)+1), [e[0] for e in index], "-", label="precision")
-	plt.plot(range(1, len(index)+1), [e[1] for e in index], "-", label="recall")
-	plt.plot(range(1, len(index)+1), [e[2] for e in index], "-", label="f1")
-	plt.plot(range(1, len(index)+1), [e[3] for e in index], "-", label="acc")
-	plt.grid(True)
-	plt.legend()
-
-	plt.subplot(122)
-	plt.plot(range(1, len(index)+1), [e[3] for e in index], "ko")
-	plt.plot(range(1, len(index)+1), [e[4] for e in index], "-", label="precision2")
-	plt.plot(range(1, len(index)+1), [e[5] for e in index], "-", label="recall2")
-	plt.plot(range(1, len(index)+1), [e[6] for e in index], "-", label="f12")
-	plt.plot(range(1, len(index)+1), [e[3] for e in index], "-", label="acc")
-	plt.grid(True)
-	plt.legend()
-
-	plt.suptitle("Sex.bi.test " + time.ctime())
-	plt.show()
-
-def age_distribution():
-	count = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
-	for line in matrix:
-		beta = which_beta(line, GSM_info)
-		count[beta] += 1
-	count["AB"] = count["A"] + count["B"]
-	count["CD"] = count["C"] + count["D"]
-	count["ABC"] = count["AB"] + count["C"]
-	return count
-
 def sex_distribution(matrix):
 	count = {'M': 0, 'F': 0}
 	for line in matrix:
@@ -578,16 +296,20 @@ def get_w(matrix):
 
 	return w
 
-def nov(matrix, k):
+def pop(matrix, k):
 	matrix = list(matrix)
+	matrix = [e for e in matrix if matrix.index(e)%3!=k]
+	#N = int(len(matrix) * 0.618)
+	#matrix = random.sample(matrix, N)
+	print len(matrix)
 	classifier = []
 
-	first = True
+	last = [0, 0, 0, 0]
 	while len(matrix) > 20:
 		w = get_w(matrix)
 		print w[0], w[-1], len(matrix)
 
-		rules = []
+		pairs = []
 		for i in range(50):
 			#print i
 			j = - (i + 1)
@@ -627,18 +349,19 @@ def nov(matrix, k):
 				win, loser = rule_no, rule_h
 			
 			if win[-2] > 20:
-				rules.append(win)
+				pairs.append([win, loser])
 
-		if rules != []:
-			rules.sort(key=lambda x:x[-1], reverse=True)
-			if first == True:
-				top =rules[k]
-				first = False
+		if pairs != []:
+			pairs.sort(key=lambda x:x[0][-1], reverse=True)
+			if pairs[0][0][-1] > last[-1]:
+				top = pairs[0][0]
+				last = pairs[0][1]
+				classifier.append(top)
+				matrix = [line for line in matrix if not isSubsequence(top[1], line)]
+				print len(classifier), top, time.ctime()
 			else:
-				top = rules[0]
-			classifier.append(top)
-			matrix = [line for line in matrix if not isSubsequence(top[1], line)]
-			print len(classifier), top, time.ctime()
+				classifier.append(last)
+				break
 		else:
 			break
 
@@ -655,12 +378,13 @@ def nov(matrix, k):
 		#pickle.dump(classifier, fp)	
 
 def acc():
-	css = read_data("bagging.css.timing")
+	css = read_data("pop.css")
 	j = 0
 	t = []
+	sample = sampling("sex_test", 2000)
+	convert(sample)
 	for i in [1000, 2000, 4000, 6000, 8000, 10000]:
-		i = int(i * 0.2)
-		sample = sampling(i)
+		#i = int(i * 0.2)
 		for c in css[j]:
 			print c
 		print ""
@@ -668,7 +392,7 @@ def acc():
 		t.append(acc)
 		j += 1
 	
-	with open("acc.bagging.pickle", "w") as fp:
+	with open("acc.pop.pickle", "w") as fp:
 		pickle.dump(t, fp)
 
 	#plt.ylim((0.5, 1))
@@ -678,10 +402,8 @@ def acc():
 	plt.grid(True)
 	plt.show()
 
-def sampling(n):
-	#matrix = read_data("sex_train")
-	matrix = read_data("sex_test")
-	convert(matrix)
+def sampling(data, n):
+	matrix = read_data(data)
 	subsum = sex_distribution(matrix)
 	
 	expect = {}
@@ -709,8 +431,8 @@ def timing():
 	t = []
 	for  i in [1000, 2000, 4000, 6000, 8000, 10000]:
 		i = int(i * 0.8)
-		sample = sampling(i)
-		matrix = []
+		sample = sampling("sex_train", i)
+		convert(sample)
 	
 		start  = time.clock()
 		#rule = nov(sample)
@@ -720,9 +442,9 @@ def timing():
 		t.append(elapsed)
 		css.append(classifiers)
 	
-	with open("bagging.css.timing.pickle", "w") as fp:
+	with open("pop.css.pickle", "w") as fp:
 		pickle.dump(css, fp)
-	with open("bagging.timing.pickle", "w") as fp:
+	with open("pop.timing.pickle", "w") as fp:
 		pickle.dump(t, fp)	
 
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t, "-")
@@ -731,54 +453,12 @@ def timing():
 	plt.grid(True)
 	plt.show()
 
-def ktest():
-	global matrix
-	rules = []
-	t = []
-	for  i in [10, 20, 50, 100, 150, 200]:
-		temp = sampling(8000)
-		temp, matrix = matrix, temp
-		rule = nov(i)
-		matrix = temp
-		
-		rules.append(rule)
-	
-	with open("rule.nov.F.ktest.pickle", "w") as fp:
-		pickle.dump(rules, fp)	
-
-def kacc():
-	global matrix
-	classifiers = read_data("rule.nov.F.ktest")
-
-	train, test = [], []
-	matrix = sampling(8000)
-	for classifier in classifiers:
-		print classifier, "\n"
-		acc = accuracy(classifier)[3]
-		train.append(acc)
-
-	matrix = read_data("sex_test")
-	convert()
-	matrix = sampling(2000)
-	for classifier in classifiers:
-		print classifier, "\n"
-		acc = accuracy(classifier)[3]
-		test.append(acc)
-
-	plt.plot([10, 20, 50, 100, 150, 200], train, "-", label="train")
-	plt.plot([10, 20, 50, 100, 150, 200], test, "-", label="test")
-	plt.ylabel("Accuracy")
-	plt.xlabel("k pairs we pick")
-	plt.grid(True)
-	plt.legend()
-	plt.show()
-
 def bagging(matrix):
 	classifiers = []
 	for i in range(3):
 		print i, len(matrix)
 		
-		c = nov(matrix, i)
+		c = pop(matrix, i)
 		classifiers.append(c)
 
 	return classifiers
@@ -789,22 +469,22 @@ def bagging(matrix):
 	print acc
 	'''
 
+def test():
+	css = read_data("bagging.css.timing")
+	for cs in css:
+		print len(cs)
+		for c in cs:
+			print len(c)
+
+
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 
 	#timing()
 	acc()
 	
-	#ktest()
-	#kacc()
+	#nov()
 	#bagging()
-	
-	#mix()
-	#deep = 0
-	#UBR_DFS()
-	#LBR()
-	#classifier_builder()
-	#show_results()
-	#rcbt()
+	#test()
 
 	print "End.", time.ctime()
