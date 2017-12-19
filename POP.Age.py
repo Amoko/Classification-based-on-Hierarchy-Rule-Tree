@@ -190,11 +190,11 @@ def get_w(matrix):
 
 	return w
 
-def nov(matrix, k):
-	#matrix = list(matrix)
-	#matrix = [e for e in matrix if matrix.index(e)%3!=k]
-	N = int(len(matrix) * 0.618)
-	matrix = random.sample(matrix, N)
+def pop(matrix, k):
+	matrix = list(matrix)
+	matrix = [e for e in matrix if matrix.index(e)%3!=k]
+	#N = int(len(matrix) * 0.618)
+	#matrix = random.sample(matrix, N)
 	print len(matrix)
 	classifier = []
 
@@ -277,7 +277,7 @@ def nov(matrix, k):
 		#pickle.dump(classifier, fp)	
 
 def acc():
-	css = read_data("bagging.css.timing")
+	css = read_data("pop.css")
 	j = 0
 	t = []
 	sample = sampling("age_test", 2000)
@@ -291,7 +291,7 @@ def acc():
 		t.append(acc)
 		j += 1
 	
-	with open("acc.bagging.pickle", "w") as fp:
+	with open("acc.pop.pickle", "w") as fp:
 		pickle.dump(t, fp)
 
 	#plt.ylim((0.5, 1))
@@ -342,9 +342,9 @@ def timing():
 		t.append(elapsed)
 		css.append(classifiers)
 	
-	with open("bagging.css.timing.pickle", "w") as fp:
+	with open("pop.css.pickle", "w") as fp:
 		pickle.dump(css, fp)
-	with open("bagging.timing.pickle", "w") as fp:
+	with open("pop.timing.pickle", "w") as fp:
 		pickle.dump(t, fp)	
 
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t, "-")
@@ -355,20 +355,23 @@ def timing():
 
 def bagging(matrix):
 	classifiers = []
-	for i in range(5):
+	for i in range(3):
 		print i, len(matrix)
 		
-		c = nov(matrix, i)
+		c = pop(matrix, i)
 		classifiers.append(c)
 
 	return classifiers
-	'''
-	matrix = read_data("sex_test_177")
-	convert()
-	acc = accuracy2(classifiers)
-	print acc
-	'''
 
+def test():
+	css = read_data("bagging.css.timing")
+
+
+	for cs in css:
+		print len(cs)
+		for c in cs:
+			print c
+	
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 	GSM_info = read_data("GSM_info")
@@ -378,5 +381,6 @@ if __name__ == "__main__":
 	
 	#nov()
 	#bagging()
+	#test()
 
 	print "End.", time.ctime()

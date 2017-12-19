@@ -35,12 +35,12 @@ def ktsp(matrix):
 	#matrix = [e for e in matrix if matrix.index(e)%3!=k]
 	print len(matrix)
 
-	k = 5
+	k = 3
 	c0, c1 = "ABC", "D"
-	tops = [[0] * 3 for i in range(k)]
+	tops = [[0] * 3 for i in range(100)]
 	
 	L = len(matrix[0])
-	for i in range(1, L, 400):
+	for i in range(1, L, 100):
 		#print i, time.ctime()
 		for j in range(i+1, L):
 			e = [i, j]
@@ -69,10 +69,23 @@ def ktsp(matrix):
 				tops.sort(key=lambda x:x[-1], reverse=True)
 				#print top
 				#print pijc0, pjic0, pijc1, pjic1
-	print tops, time.ctime()
-	return tops
-	#with open("tsp.pickle", "w") as fp:
-		#pickle.dump(top, fp)	
+	final = []
+	final.append(tops[0])
+	s = set(tops[0][1])
+
+	
+	tops = [e for e in tops if e[1][0] not in s and e[1][1] not in s]
+	tops.sort(key=lambda x:x[-1], reverse=True)
+	final.append(tops[0])
+	s = s | set(tops[0][1])
+
+	tops = [e for e in tops if e[1][0] not in s and e[1][1] not in s]
+	tops.sort(key=lambda x:x[-1], reverse=True)
+	final.append(tops[0])
+
+
+	print final, time.ctime()
+	return final
 
 def sampling(data, n):
 	matrix = read_data(data)
@@ -109,7 +122,7 @@ def timing():
 		cs = ktsp(sample)
 		elapsed = time.clock() - start
 		
-		t.append(elapsed * 40)
+		t.append(elapsed * 100)
 		css.append(cs)
 	
 	with open("ktsp.pairs.pickle", "w") as fp:
@@ -205,12 +218,15 @@ def compare_t():
 	plt.show()
 
 def compare_a():
-	t1 = read_data("acc.bagging")
+	t1 = read_data("acc.pop")
 	t2 = read_data("acc.ktsp")
 	
-	plt.ylim((0.9,1))
-	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="our")
-	#plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
+	
+	plt.ylim((0.1,1))
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="k-pop")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "ko")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "ko")
 	plt.ylabel("Accuracy")
 	plt.xlabel("# of samples")
 	plt.grid(True)
@@ -227,10 +243,10 @@ if __name__ == "__main__":
 	print "Start.", time.ctime()
 	GSM_info = read_data("GSM_info")
 	#tsp()
-	timing()
+	#timing()
 	#acc()
 
 	#test()
-	#compare_a()
+	compare_a()
 
 	print "End.", time.ctime()
