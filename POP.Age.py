@@ -124,19 +124,6 @@ def accuracy2(matrix, classifiers):
 	
 	return temp
 
-def origin():
-	# sd [[3, 42], [1, 54], [2, 60]]
-	# the first is origin index, thesecond is na count
-	
-
-	classifier = read_data("rule.nov.21th")
-	for rule in classifier:
-		print rule
-		beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
-		new = []
-		for e in alpha:
-			new.append(sd[e][0])
-		print new
 
 def age_distribution(matrix):
 	count = {'ABC': 0, 'D': 0}
@@ -330,7 +317,7 @@ def timing():
 	css = []
 	t = []
 	for  i in [1000, 2000, 4000, 6000, 8000, 10000]:
-		i = int(i * 0.8)
+		#i = int(i * 0.8)
 		sample = sampling("age_train", i)
 		convert(sample)
 	
@@ -363,18 +350,47 @@ def bagging(matrix):
 
 	return classifiers
 
-def test():
-	css = read_data("bagging.css.timing")
 
+def origin(alpha):
+	# sd [[3, 42], [1, 54], [2, 60]]
+	# the first is origin index, thesecond is na count
+	new = []
+	for e in alpha:
+		new.append(sd[e][0])
+	return new
+
+def test():
+	css = read_data("pop.css")
 
 	for cs in css:
 		print len(cs)
 		for c in cs:
+			#print c
+			for rule in c:
+				if len(rule) == 4:
+					rule[1] = origin(rule[1])
 			print c
-	
+		print ""
+
+def info():
+	#matrix = read_data("age_train")
+	a = set()
+	for e in GSM_info:
+		print e, GSM_info[e]
+		gpl = GSM_info[e][0]
+		a.add(gpl)
+	print len(a), a
+
+def stats():
+	matrix = read_data("age_train")
+	print len(matrix[0])
+	count = age_distribution(matrix)
+	print count
+
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 	GSM_info = read_data("GSM_info")
+	sd = read_data("sd")
 
 	#timing()
 	acc()
@@ -382,5 +398,7 @@ if __name__ == "__main__":
 	#nov()
 	#bagging()
 	#test()
+	#info()
+	#stats()
 
 	print "End.", time.ctime()

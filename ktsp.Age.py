@@ -1,3 +1,4 @@
+#coding: utf-8
 #July 23 2017
 import time
 import sys
@@ -6,12 +7,34 @@ import itertools
 import cPickle as pickle
 import matplotlib.pyplot as plt
 
+from matplotlib.font_manager import FontManager
+from pylab import mpl
+import subprocess
+
+def get_matplot_zh_font():
+    fm = FontManager()
+    mat_fonts = set(f.name for f in fm.ttflist)
+
+    output = subprocess.check_output('fc-list :lang=zh -f "%{family}\n"', shell=True)
+    zh_fonts = set(f.split(',', 1)[0] for f in output.split('\n'))
+    available = list(mat_fonts & zh_fonts)
+
+    print '*' * 10, '可用的字体', '*' * 10
+    for f in available:
+        print f
+    return available
+
+def set_matplot_zh_font():
+    available = get_matplot_zh_font()
+    if len(available) > 0:
+        mpl.rcParams['font.sans-serif'] = [available[0]]    # 指定默认字体
+        mpl.rcParams['axes.unicode_minus'] = False          # 解决保存图像是负号'-'显示为方块的问题
+
 def read_data(path):
 	with open(path + ".pickle", "r") as fp:
 		obj = pickle.load(fp)
 	print len(obj), path + " elements load over.", time.ctime()
 	return obj
-
 
 def age_beta_D(line, GSM_info):
 	gsm = line[0]
@@ -40,7 +63,7 @@ def ktsp(matrix):
 	tops = [[0] * 3 for i in range(100)]
 	
 	L = len(matrix[0])
-	for i in range(1, L, 100):
+	for i in range(1, L, 47):
 		#print i, time.ctime()
 		for j in range(i+1, L):
 			e = [i, j]
@@ -115,14 +138,14 @@ def timing():
 	css = []
 	t = []
 	for  i in [1000, 2000, 4000, 6000, 8000, 10000]:
-		i = int(i * 0.8)
+		#i = int(i * 0.8)
 		sample = sampling("age_train", i)
 	
 		start  = time.clock()
 		cs = ktsp(sample)
 		elapsed = time.clock() - start
 		
-		t.append(elapsed * 100)
+		t.append(elapsed * 47)
 		css.append(cs)
 	
 	with open("ktsp.pairs.pickle", "w") as fp:
@@ -184,7 +207,8 @@ def acc():
 	cs = read_data("ktsp.pairs")
 	j = 0
 	t1, t2 = [], []
-	sample = sampling("age_test", 2000)
+	#sample = sampling("age_test", 2000)
+	sample  = read_data("age_test")
 	for i in [1000, 2000, 4000, 6000, 8000, 10000]:
 		#i = int(i * 0.2)
 
@@ -206,13 +230,35 @@ def acc():
 
 
 def compare_t():
-	t1 = read_data("nov.timing")
+	t1 = read_data("pop.timing")
 	t2 = read_data("ktsp.timing")
-		
-	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="our")
-	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
-	plt.ylabel("CPU time(second)")
-	plt.xlabel("# of samples")
+	t3 = read_data("svm_rfe.timing")
+	
+	'''
+	fig, ax1 = plt.subplots()
+
+	ax1.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, 'b-')
+	ax1.set_xlabel('# of samples')
+	# Make the y-axis label, ticks and tick labels match the line color.
+	ax1.set_ylabel('CPU time(second)', color='b')
+	ax1.tick_params('y', colors='b')
+
+	ax2 = ax1.twinx()
+	ax2.plot([1000, 2000, 4000, 6000, 8000, 10000], [e/3600 for e in t2], 'r-')
+	ax2.set_ylabel('CPU time(h)', color='r')
+	ax2.tick_params('y', colors='r')
+
+	fig.tight_layout()
+	plt.show()
+	'''
+	fig, ax = plt.subplots()
+	ax.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="k-ppt")
+	ax.plot([1000, 2000, 4000, 6000, 8000, 10000], [e/3 for e in t2], "-", label="k-tsp")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "-", label="svm-rfe")
+	ax.set_ylabel(u"CPU时间/秒")
+	ax.set_yscale("log")
+	ax.set_xlabel(u"样本数量")
+	
 	plt.grid(True)
 	plt.legend()
 	plt.show()
@@ -220,15 +266,20 @@ def compare_t():
 def compare_a():
 	t1 = read_data("acc.pop")
 	t2 = read_data("acc.ktsp")
+	t3 = read_data("acc.svm_rfe")
+
+	print t1[-1], t2[-1], t3[-1]
 	
-	
-	plt.ylim((0.1,1))
+	plt.ylim((0,1))
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="k-pop")
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "-", label="svm-rfe")
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "ko")
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "ko")
-	plt.ylabel("Accuracy")
-	plt.xlabel("# of samples")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "ko")
+	
+	plt.ylabel(u"分类准确度")
+	plt.xlabel(u"样本数量")
 	plt.grid(True)
 	plt.legend()
 	plt.show()
@@ -241,11 +292,12 @@ def test():
 
 if __name__ == "__main__":
 	print "Start.", time.ctime()
+	set_matplot_zh_font()
+	
 	GSM_info = read_data("GSM_info")
 	#tsp()
 	#timing()
 	#acc()
-
 	#test()
 	compare_a()
 
