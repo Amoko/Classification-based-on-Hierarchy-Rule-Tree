@@ -1,3 +1,4 @@
+# coding: utf-8
 #July 23 2017
 import time
 import sys
@@ -5,6 +6,29 @@ import copy
 import itertools
 import cPickle as pickle
 import matplotlib.pyplot as plt
+
+from matplotlib.font_manager import FontManager
+from pylab import mpl
+import subprocess
+
+def get_matplot_zh_font():
+    fm = FontManager()
+    mat_fonts = set(f.name for f in fm.ttflist)
+
+    output = subprocess.check_output('fc-list :lang=zh -f "%{family}\n"', shell=True)
+    zh_fonts = set(f.split(',', 1)[0] for f in output.split('\n'))
+    available = list(mat_fonts & zh_fonts)
+
+    print '*' * 10, '可用的字体', '*' * 10
+    for f in available:
+        print f
+    return available
+
+def set_matplot_zh_font():
+    available = get_matplot_zh_font()
+    if len(available) > 0:
+        mpl.rcParams['font.sans-serif'] = [available[0]]    # 指定默认字体
+        mpl.rcParams['axes.unicode_minus'] = False          # 解决保存图像是负号'-'显示为方块的问题
 
 def read_data(path):
 	with open(path + ".pickle", "r") as fp:
@@ -184,13 +208,19 @@ def acc():
 
 
 def compare_t():
-	t1 = read_data("nov.timing")
+	t1 = read_data("pop.timing")
 	t2 = read_data("ktsp.timing")
-		
-	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="our")
-	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
-	plt.ylabel("CPU time(second)")
-	plt.xlabel("# of samples")
+	t3 = read_data("svm_rfe.timing")
+	
+	fig, ax = plt.subplots()
+	ax.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="k-ppt")
+	ax.plot([1000, 2000, 4000, 6000, 8000, 10000], [e/3 for e in t2], "-", label="k-tsp")
+	#ax.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "-", label="svm-rfe")
+	ax.set_ylabel(u"CPU时间/秒")
+	ax.set_yscale("log")
+	ax.set_xlabel(u"样本数量")
+	
 	plt.grid(True)
 	plt.legend()
 	plt.show()
@@ -198,12 +228,18 @@ def compare_t():
 def compare_a():
 	t1 = read_data("acc.pop")
 	t2 = read_data("acc.ktsp")
+	t3 = read_data("acc.svm_rfe")
 	
-	plt.ylim((0.7,1))
+	print t1[-1], t2[-1], t3[-1]
+	plt.ylim((0, 1))
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "-", label="k-pop")
 	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "-", label="k-tsp")
-	plt.ylabel("Accuracy")
-	plt.xlabel("# of samples")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "-", label="svm-rfe")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t1, "ko")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t2, "ko")
+	plt.plot([1000, 2000, 4000, 6000, 8000, 10000], t3, "ko")
+	plt.ylabel(u"分类准确度")
+	plt.xlabel(u"样本数量")
 	plt.grid(True)
 	plt.legend()
 	plt.show()
@@ -217,6 +253,7 @@ def test():
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 
+	set_matplot_zh_font()
 	#tsp()
 	#timing()
 	#acc()

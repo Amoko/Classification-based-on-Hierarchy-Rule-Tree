@@ -231,20 +231,6 @@ def accuracy2(matrix, classifiers):
 	
 	return temp
 
-def origin():
-	# sd [[3, 42], [1, 54], [2, 60]]
-	# the first is origin index, thesecond is na count
-	
-
-	classifier = read_data("rule.nov.21th")
-	for rule in classifier:
-		print rule
-		beta, alpha, sup, conf = rule[0], rule[1], rule[2], rule[3]
-		new = []
-		for e in alpha:
-			new.append(sd[e][0])
-		print new
-
 def sex_distribution(matrix):
 	count = {'M': 0, 'F': 0}
 	for line in matrix:
@@ -296,6 +282,25 @@ def get_w(matrix):
 
 	return w
 
+
+def iter1(w):
+	l = []
+	for i in range(50):
+		j = - (i + 1)
+		e = [w[i][0], w[j][0]]
+		l.append(e)
+	return l
+
+def iter2(w):
+	l = []
+	for i in range(10):
+		for j in range(10):
+			j = - (j + 1)
+			e = [w[i][0], w[j][0]]
+			l.append(e)
+	return l
+
+
 def pop(matrix, k):
 	matrix = list(matrix)
 	matrix = [e for e in matrix if matrix.index(e)%3!=k]
@@ -310,13 +315,7 @@ def pop(matrix, k):
 		print w[0], w[-1], len(matrix)
 
 		pairs = []
-		for i in range(50):
-			#print i
-			j = - (i + 1)
-			e = [w[i][0], w[j][0]]
-
-			#hit, nohit = {'AB': 0, 'CD': 0}, {'AB': 0, 'CD': 0}
-			#hit, nohit = {'ABC': 0, 'D': 0}, {'ABC': 0, 'D': 0}
+		for e in iter1(w):
 			hit, nohit = {'M': 0, 'F': 0}, {'M': 0, 'F': 0}
 			for line in matrix:
 				beta = sex_beta(line)
@@ -469,22 +468,55 @@ def bagging(matrix):
 	print acc
 	'''
 
+def origin2(alpha, mt):
+	# mapping now: original
+	new = []
+	for e in alpha:
+		new.append(mt[e])
+	return new
+
 def test():
-	css = read_data("bagging.css.timing")
+	css = read_data("pop.css")
+
+	with open("mapping.txt", "r") as fp:
+		obj = fp.readlines()
+	obj = [line.strip() for line in obj]
+	mt = []
+	for e in obj:
+		i = e.index(":")
+		v = int(e[i+1:])
+		mt.append(v)
+
+	# for i in range(len(obj)):
+	# 	print i, obj[i], mapping[i]
+
+
 	for cs in css:
 		print len(cs)
 		for c in cs:
-			print len(c)
+			#print c
+			for rule in c:
+				if len(rule) == 4:
+					rule[1] = origin2(rule[1], mt)
+			print c
+		print ""
 
+def stats():
+	matrix = read_data("sex_train")
+	print len(matrix[0])
+
+	count = sex_distribution(matrix)
+	print count
 
 if __name__ == "__main__":
 	print "Start.", time.ctime()
 
 	#timing()
-	acc()
+	#acc()
 	
 	#nov()
 	#bagging()
 	#test()
+	stats()
 
 	print "End.", time.ctime()
